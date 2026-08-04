@@ -1,4 +1,16 @@
-.vrmachine/ 
-matched_results.csv
-results.csv
-schema.csv
+# ---- 팀 공통 (루트에 생기는 임시/결과 파일) ----
+.vrmachine/
+/matched_results.csv
+/results.csv
+/schema.csv
+
+# ---- 개인 환경 ----
+.venv/
+.vscode/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
+.DS_Store
+
+# ---- 대용량 원본 (저장소에는 압축본 data/results.csv.gz 만 둔다) ----
+/data/results.csv
