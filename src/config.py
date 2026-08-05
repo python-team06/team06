@@ -32,6 +32,12 @@ GOLD_WIDE_PARQUET = DATA_DIR / "gold_wide.parquet"    # 2단계: ML용 멀티핫
 GOLD_LONG_PARQUET = DATA_DIR / "gold_long.parquet"    # 2단계: 통계용 세로 형태
 DICTIONARY_CSV = DATA_DIR / "so2024_dictionary.csv"   # 컬럼 -> qid/질문 원문 대응표
 
+# ---------- AISelect 예측용 분할 산출물 (3단계) ----------
+AI_TRAIN_PARQUET = DATA_DIR / "ai_train.parquet"      # 학습용 (80%)
+AI_TEST_PARQUET = DATA_DIR / "ai_test.parquet"        # 최종 평가용 (20%, 1회만 사용)
+AI_SPLIT_IDS_CSV = DATA_DIR / "ai_split_ids.csv"      # ResponseId -> train/test 소속
+AI_MANIFEST_JSON = DATA_DIR / "ai_split_manifest.json"  # 분할 명세(제거 컬럼·규칙 포함)
+
 # ---------- 데이터 규약 ----------
 # 다중선택 문항은 한 칸에 "Python;SQL;Go" 처럼 이어 붙어 있다.
 MULTI_SEP = ";"
