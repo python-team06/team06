@@ -39,10 +39,23 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 | 0 | `"NA"` 문자열만 결측으로 읽기 (`keep_default_na=False, na_values=["NA"]`) | — |
 | 1 | `Check`/`CompTotal`/`Currency` 드롭 · 공백 컬럼명 10개 rename · `YearsCode*` sentinel 숫자화 · `Age`/`EdLevel`/`OrgSize`/`SOVisitFreq` 순서형 `*Num` 추가 | `silver.parquet` |
 | 2 | 다중선택 57개 → 멀티핫 0/1 + `__answered` 플래그 (wide) / 응답자×선택지 세로 형태 (long) | `gold_wide.parquet`, `gold_long.parquet` |
+| 3 | AISelect 예측용: 무응답 4,530명 제외 · 누수 컬럼 가족 185개 제거 · 층화 분할 8:2 (seed=42) — `python -m src.split_aiselect` | `ai_train.parquet`, `ai_test.parquet`, `ai_split_ids.csv`, `ai_split_manifest.json` |
 
 설계 근거 (전수 검증 완료):
 - `*Admired` 11개 = `Have ∩ Want` 와 100% 일치하는 파생 컬럼 → wide 에서 제외, long 에는 유지
 - 그리드형 컬럼의 `""` = "답했지만 빈 버킷", `"NA"` = "질문 안 봄" → `__answered` 는 `"NA"` 만 미응답 처리
+
+### 3단계: AISelect 예측용 분할 (`ai_train` / `ai_test`)
+
+- 타깃: `target = 1 if AISelect == "Yes" else 0` (train/test 양성 비율 61.8% 동일 — 층화)
+- **누수 제거**: AISelect 값에 따라 조건부로 노출되는 꼬리질문 15개
+  (Yes 전용 11 + Yes·도입계획 공용 4) + 타깃과 동어반복인 `AISearchDev` 2개
+  → wide 컬럼 가족 기준 185개 제거. 근거 실측치는 `src/split_aiselect.py` docstring 참조
+- **팀 규칙** (자세한 내용은 `data/ai_split_manifest.json`):
+  - `ai_test` 는 최종 평가 **1회만** 사용 — 모델·피처 선택은 train 내부 CV 로
+  - target encoding·스케일링 등 fitted 변환은 **train 에서만 fit**
+  - `ResponseId` 는 인덱스(식별자) — 피처로 사용 금지
+  - silver/long 으로 작업할 때는 `ai_split_ids.csv` 로 같은 분할을 재현
 
 ## 어떤 파일을 쓰면 되나
 
