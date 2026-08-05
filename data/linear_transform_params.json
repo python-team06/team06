@@ -1,0 +1,27 @@
+{
+  "winsor": {
+    "col": "ConvertedCompYearly",
+    "p01": 219.68,
+    "p99": 386662.0
+  },
+  "medians": {
+    "ConvertedCompYearly_log": 11.082157933374816,
+    "YearsCode_log": 2.4849066497880004,
+    "YearsCodePro_log": 2.1972245773362196,
+    "WorkExp_log": 2.302585092994046,
+    "JobSatPoints_1_log": 2.3978952727983707,
+    "JobSatPoints_4_log": 0.0,
+    "JobSatPoints_5_log": 0.0,
+    "JobSatPoints_6_log": 3.044522437723423,
+    "JobSatPoints_7_log": 2.772588722239781,
+    "JobSatPoints_8_log": 2.3978952727983707,
+    "JobSatPoints_9_log": 1.791759469228055,
+    "JobSatPoints_10_log": 0.0,
+    "JobSatPoints_11_log": 0.0,
+    "JobSat": 7.0,
+    "AgeNum": 29.5,
+    "EdLevelNum": 5.0,
+    "OrgSizeNum": 5.0,
+    "SOVisitFreqNum": 3.0
+  }
+}
