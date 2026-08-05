@@ -38,6 +38,12 @@ AI_TEST_PARQUET = DATA_DIR / "ai_test.parquet"        # 최종 평가용 (20%, 1
 AI_SPLIT_IDS_CSV = DATA_DIR / "ai_split_ids.csv"      # ResponseId -> train/test 소속
 AI_MANIFEST_JSON = DATA_DIR / "ai_split_manifest.json"  # 분할 명세(제거 컬럼·규칙 포함)
 
+# ---------- 선형 트랙 변환 산출물 (4단계) ----------
+# 트리 모델(LightGBM)용은 ai_train/ai_test 그대로, 선형/로지스틱용은 아래 파일을 쓴다.
+AI_TRAIN_LINEAR_PARQUET = DATA_DIR / "ai_train_linear.parquet"
+AI_TEST_LINEAR_PARQUET = DATA_DIR / "ai_test_linear.parquet"
+LINEAR_PARAMS_JSON = DATA_DIR / "linear_transform_params.json"  # train 에서 fit 한 값 기록
+
 # ---------- 데이터 규약 ----------
 # 다중선택 문항은 한 칸에 "Python;SQL;Go" 처럼 이어 붙어 있다.
 MULTI_SEP = ";"

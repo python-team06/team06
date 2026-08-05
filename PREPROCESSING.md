@@ -40,6 +40,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 | 1 | `Check`/`CompTotal`/`Currency` 드롭 · 공백 컬럼명 10개 rename · `YearsCode*` sentinel 숫자화 · `Age`/`EdLevel`/`OrgSize`/`SOVisitFreq` 순서형 `*Num` 추가 | `silver.parquet` |
 | 2 | 다중선택 57개 → 멀티핫 0/1 + `__answered` 플래그 (wide) / 응답자×선택지 세로 형태 (long) | `gold_wide.parquet`, `gold_long.parquet` |
 | 3 | AISelect 예측용: 무응답 4,530명 제외 · 누수 컬럼 가족 185개 제거 · 층화 분할 8:2 (seed=42) — `python -m src.split_aiselect` | `ai_train.parquet`, `ai_test.parquet`, `ai_split_ids.csv`, `ai_split_manifest.json` |
+| 4 | **선형 트랙** 변환: 윈저라이징(comp, train p1/p99) · log1p 13개 · zero-inflated `_any` 플래그 4개 · **중앙값 대체 + `_missing` 플래그 18개** — `python -m src.transform_linear` | `ai_train_linear.parquet`, `ai_test_linear.parquet`, `linear_transform_params.json` |
 
 설계 근거 (전수 검증 완료):
 - `*Admired` 11개 = `Have ∩ Want` 와 100% 일치하는 파생 컬럼 → wide 에서 제외, long 에는 유지
@@ -56,6 +57,21 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
   - target encoding·스케일링 등 fitted 변환은 **train 에서만 fit**
   - `ResponseId` 는 인덱스(식별자) — 피처로 사용 금지
   - silver/long 으로 작업할 때는 `ai_split_ids.csv` 로 같은 분할을 재현
+
+### 4단계: 어느 트랙의 파일을 쓰나 (모델별)
+
+| 모델 | 파일 | 이유 |
+|---|---|---|
+| LightGBM 등 트리 | `ai_train.parquet` / `ai_test.parquet` **그대로** | 트리는 단조변환에 불변, NaN 네이티브 처리 — 변환 불필요 |
+| 로지스틱·statsmodels 등 선형 | `ai_train_linear.parquet` / `ai_test_linear.parquet` | 왜도 교정(log1p)·윈저라이징·중앙값 대체 완료 |
+
+선형 파일의 규약:
+- `<이름>_log` = log1p 변환본 (원본 수치 컬럼은 제거됨 — 중복 사용 방지)
+- `<이름>_missing` = 원래 결측이었는지 (결측률이 클래스와 상관하므로 신호 보존)
+- `<이름>_any` = zero-inflated 4개(JobSatPoints_4/5/10/11)의 "0 초과" 여부
+- 윈저 경계·중앙값은 **train 에서만 fit** — 값은 `linear_transform_params.json` 참조
+- **스케일링(StandardScaler)은 안 되어 있음** — 모델 파이프라인(CV 내부)에서 할 것
+- category 컬럼의 결측은 그대로 NaN — 원핫 시 `dummy_na=True` 등으로 처리
 
 ## 어떤 파일을 쓰면 되나
 
