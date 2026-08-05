@@ -41,6 +41,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 | 2 | 다중선택 57개 → 멀티핫 0/1 + `__answered` 플래그 (wide) / 응답자×선택지 세로 형태 (long) | `gold_wide.parquet`, `gold_long.parquet` |
 | 3 | AISelect 예측용: 무응답 4,530명 제외 · 누수 컬럼 가족 185개 제거 · 층화 분할 8:2 (seed=42) — `python -m src.split_aiselect` | `ai_train.parquet`, `ai_test.parquet`, `ai_split_ids.csv`, `ai_split_manifest.json` |
 | 4 | **선형 트랙** 변환: 윈저라이징(comp, train p1/p99) · log1p 13개 · zero-inflated `_any` 플래그 4개 · **중앙값 대체 + `_missing` 플래그 18개** — `python -m src.transform_linear` | `ai_train_linear.parquet`, `ai_test_linear.parquet`, `linear_transform_params.json` |
+| 5 | **베이스라인 모델**: 로지스틱 회귀 (스케일링 + 원핫 min_frequency=30, 5-fold CV 후 test 1회) — `python -m src.train_logistic` | `model_logistic.joblib`, `logistic_metrics.json` |
 
 설계 근거 (전수 검증 완료):
 - `*Admired` 11개 = `Have ∩ Want` 와 100% 일치하는 파생 컬럼 → wide 에서 제외, long 에는 유지

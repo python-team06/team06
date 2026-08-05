@@ -44,6 +44,10 @@ AI_TRAIN_LINEAR_PARQUET = DATA_DIR / "ai_train_linear.parquet"
 AI_TEST_LINEAR_PARQUET = DATA_DIR / "ai_test_linear.parquet"
 LINEAR_PARAMS_JSON = DATA_DIR / "linear_transform_params.json"  # train 에서 fit 한 값 기록
 
+# ---------- 모델 산출물 (5단계) ----------
+LOGISTIC_MODEL_JOBLIB = DATA_DIR / "model_logistic.joblib"   # 학습된 파이프라인
+LOGISTIC_METRICS_JSON = DATA_DIR / "logistic_metrics.json"   # CV·test 성능 기록
+
 # ---------- 데이터 규약 ----------
 # 다중선택 문항은 한 칸에 "Python;SQL;Go" 처럼 이어 붙어 있다.
 MULTI_SEP = ";"
