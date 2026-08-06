@@ -58,7 +58,7 @@ except ModuleNotFoundError:
     )
 
 SEED = 42
-SCORING = ["roc_auc", "accuracy", "f1", "balanced_accuracy"]
+SCORING = ["roc_auc", "accuracy", "f1", "f1_macro", "balanced_accuracy"]
 
 
 def load(path) -> tuple[pd.DataFrame, pd.Series]:
@@ -125,10 +125,14 @@ def main() -> None:
     model.fit(x_tr, y_tr)
     prob = model.predict_proba(x_te)[:, 1]
     pred = (prob >= 0.5).astype(int)
+    f1_each = f1_score(y_te, pred, average=None)          # [클래스0, 클래스1]
     test_result = {
         "roc_auc": round(float(roc_auc_score(y_te, prob)), 4),
         "accuracy": round(float((pred == y_te).mean()), 4),
         "f1": round(float(f1_score(y_te, pred)), 4),
+        "f1_macro": round(float(f1_score(y_te, pred, average="macro")), 4),
+        "f1_per_class": {"미사용(0)": round(float(f1_each[0]), 4),
+                         "사용(1)": round(float(f1_each[1]), 4)},
         "balanced_accuracy": round(float(balanced_accuracy_score(y_te, pred)), 4),
         "confusion_matrix": confusion_matrix(y_te, pred).tolist(),
     }
