@@ -14,6 +14,21 @@ import matplotlib
 import platform
 import seaborn as sns
 
+import sys
+from pathlib import Path
+
+try:
+    from src.config import (
+        SILVER_PARQUET
+    )
+except ModuleNotFoundError:
+    # 이 파일을 직접 실행하면(IDE 의 F5 등) src 를 패키지로 못 찾는다.
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from src.config import (
+        SILVER_PARQUET
+    )
+
+
 # ---------------------------------------------------------
 # 한글 폰트 설정
 # ---------------------------------------------------------
@@ -29,12 +44,12 @@ matplotlib.rcParams["axes.unicode_minus"] = False
 # =========================================================
 # 0. 공통 설정 & 데이터 불러오기 & 전처리 (한 번만 수행)
 # =========================================================
-FILE_PATH = "matched_results.csv"
+FILE_PATH = SILVER_PARQUET
 ENCODING = "utf-8"
 ALPHA = 0.05
 TARGET = "AISelect"
 
-df = pd.read_csv(FILE_PATH, encoding=ENCODING)
+df = pd.read_parquet(FILE_PATH)
 
 
 def clean_years(x):
@@ -63,7 +78,7 @@ if "CompTotal" in df.columns:
     )
 
 numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-categorical_cols = df.select_dtypes(include=["object", "str", "category"]).columns.tolist()
+categorical_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
 
 print(f"수치형 변수 ({len(numeric_cols)}개): {numeric_cols}")
 print(f"범주형 변수 ({len(categorical_cols)}개): {categorical_cols}\n")
