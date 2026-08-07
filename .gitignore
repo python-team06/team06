@@ -1,9 +1,10 @@
 # ---- 팀 공통 (루트에 생기는 임시/결과 파일) ----
 .vrmachine/
+.mlenv/
 /matched_results.csv
-/results.csv
 /schema.csv
-
+/output/
+/catboost_info/
 # ---- 개인 환경 ----
 .venv/
 .vscode/
