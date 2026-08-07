@@ -71,17 +71,19 @@ def main() -> None:
                             "Helvetica", "Arial"],
         "font.family": "sans-serif", "axes.unicode_minus": False,
     })
-    fig, axes = plt.subplots(2, 4, figsize=(16, 7.6), dpi=150)
+    fig, axes = plt.subplots(2, 4, figsize=(16, 8.4), dpi=150)
     ax = axes.ravel()
 
     def draw(a, series, bins, title, note, xlabel=""):
         a.hist(series.dropna(), bins=bins, color=BLUE)
-        a.set_title(title, loc="left", fontsize=10, fontweight="bold", color=INK, pad=10)
-        a.text(0, 1.005, note, transform=a.transAxes, fontsize=7.8, color=MUTED,
-               va="bottom")
+        a.set_title(title, loc="left", fontsize=10, fontweight="bold", color=INK, pad=6)
         a.set_yticks([])
         a.set_xlabel(xlabel, fontsize=8)
         a.tick_params(labelsize=8)
+        # 통계 주석은 그래프 하단(x축 라벨 아래)에 배치한다
+        if note:
+            a.text(0, -0.30, note, transform=a.transAxes, fontsize=7.8,
+                   color=MUTED, va="top", ha="left")
         for side in ("top", "right", "left"):
             a.spines[side].set_visible(False)
 
@@ -126,6 +128,7 @@ def main() -> None:
              "JobSatPoints 11개 문항 중 대표 2개만 표시",
              fontsize=8.5, color=MUTED)
     fig.tight_layout(rect=[0, 0, 1, 0.93])
+    fig.subplots_adjust(hspace=0.66)   # 하단 주석과 다음 행 제목 사이 여백
     fig.savefig(OUT, facecolor=SURFACE, bbox_inches="tight")
     print(f"\n저장: {OUT}")
 
