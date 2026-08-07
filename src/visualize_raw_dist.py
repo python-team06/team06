@@ -40,12 +40,6 @@ STAT_COLS = ["ConvertedCompYearly", "YearsCode", "YearsCodePro", "WorkExp", "Job
              "JobSatPoints_11"]
 
 
-def stat_line(s: pd.Series, n_total: int) -> str:
-    v = s.dropna()
-    return (f"결측 {100 * (1 - len(v) / n_total):.0f}% · 중앙값 {v.median():,.0f} · "
-            f"왜도 {v.skew():+.1f}")
-
-
 def print_stats(df: pd.DataFrame) -> None:
     """보고서 표에 옮겨 적을 수치를 콘솔에 찍는다."""
     n = len(df)
@@ -59,7 +53,6 @@ def print_stats(df: pd.DataFrame) -> None:
 
 def main() -> None:
     df = pd.read_parquet(SILVER_PARQUET, columns=STAT_COLS)
-    n = len(df)
     print_stats(df)
 
     plt.rcParams.update({
@@ -71,56 +64,39 @@ def main() -> None:
                             "Helvetica", "Arial"],
         "font.family": "sans-serif", "axes.unicode_minus": False,
     })
-    fig, axes = plt.subplots(2, 4, figsize=(16, 8.4), dpi=150)
+    fig, axes = plt.subplots(2, 4, figsize=(16, 7.6), dpi=150)
     ax = axes.ravel()
 
-    def draw(a, series, bins, title, note, xlabel=""):
+    def draw(a, series, bins, title, xlabel=""):
         a.hist(series.dropna(), bins=bins, color=BLUE)
-        a.set_title(title, loc="left", fontsize=10, fontweight="bold", color=INK, pad=6)
+        a.set_title(title, loc="left", fontsize=14, fontweight="bold", color=INK, pad=10)
         a.set_yticks([])
         a.set_xlabel(xlabel, fontsize=8)
         a.tick_params(labelsize=8)
-        # 통계 주석은 그래프 하단(x축 라벨 아래)에 배치한다
-        if note:
-            a.text(0, -0.30, note, transform=a.transAxes, fontsize=7.8,
-                   color=MUTED, va="top", ha="left")
         for side in ("top", "right", "left"):
             a.spines[side].set_visible(False)
 
     comp = df["ConvertedCompYearly"]
     p995 = comp.quantile(0.995)
     draw(ax[0], comp.clip(upper=p995), np.linspace(0, p995, 40),
-         "① 연 보수 USD (ConvertedCompYearly)",
-         f"{stat_line(comp, n)} · 최대 \\${comp.max() / 1e6:.1f}M (표시범위 밖)",
-         "표시는 상위 0.5% 절단")
+         "① 연 보수 USD (ConvertedCompYearly)", "표시는 상위 0.5% 절단")
     draw(ax[1], np.log10(comp.dropna()), 40,
-         "② 연 보수 USD — log10 축",
-         "",
-         "log10(USD)")
+         "② 연 보수 USD — log10 축", "log10(USD)")
     yc = df["YearsCode"]
     draw(ax[2], yc, np.arange(0, 53, 1),
-         "③ 코딩 연수 (YearsCode)",
-         stat_line(yc, n), "년")
+         "③ 코딩 연수 (YearsCode)", "년")
     draw(ax[3], df["YearsCodePro"], np.arange(0, 53, 1),
-         "④ 직업 코딩 연수 (YearsCodePro)",
-         stat_line(df["YearsCodePro"], n), "년")
+         "④ 직업 코딩 연수 (YearsCodePro)", "년")
     draw(ax[4], df["WorkExp"], np.arange(0, 51, 1),
-         "⑤ 근무 경력 (WorkExp)",
-         stat_line(df["WorkExp"], n), "년")
+         "⑤ 근무 경력 (WorkExp)", "년")
     draw(ax[5], df["JobSat"], np.arange(-0.5, 11.5, 1),
-         "⑥ 직무 만족 0~10 (JobSat)",
-         stat_line(df["JobSat"], n), "점")
+         "⑥ 직무 만족 0~10 (JobSat)", "점")
     js6, js4 = df["JobSatPoints_6"], df["JobSatPoints_4"]
 
-    def zero_pct(s: pd.Series) -> str:
-        return f"0점 비율 {100 * (s.dropna() == 0).mean():.0f}%"
-
     draw(ax[6], js6, np.arange(0, 102, 2.5),
-         "⑦ 배점: 코드 품질 개선 (JobSatPoints_6)",
-         f"{stat_line(js6, n)} · {zero_pct(js6)}", "배점(100점 분배)")
+         "⑦ 배점: 코드 품질 개선 (JobSatPoints_6)", "배점(100점 분배)")
     draw(ax[7], js4, np.arange(0, 102, 2.5),
-         "⑧ 배점: 오픈소스 기여 (JobSatPoints_4)",
-         f"{stat_line(js4, n)} · {zero_pct(js4)}", "배점(100점 분배)")
+         "⑧ 배점: 오픈소스 기여 (JobSatPoints_4)", "배점(100점 분배)")
 
     fig.suptitle("수치형 원자료 분포 — 변환 이전 · n=65,437",
                  x=0.008, y=0.995, ha="left", fontsize=13, fontweight="bold", color=INK)
@@ -128,7 +104,6 @@ def main() -> None:
              "JobSatPoints 11개 문항 중 대표 2개만 표시",
              fontsize=8.5, color=MUTED)
     fig.tight_layout(rect=[0, 0, 1, 0.93])
-    fig.subplots_adjust(hspace=0.66)   # 하단 주석과 다음 행 제목 사이 여백
     fig.savefig(OUT, facecolor=SURFACE, bbox_inches="tight")
     print(f"\n저장: {OUT}")
 
