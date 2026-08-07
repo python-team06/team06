@@ -88,44 +88,42 @@ def main() -> None:
     comp = df["ConvertedCompYearly"]
     p995 = comp.quantile(0.995)
     draw(ax[0], comp.clip(upper=p995), np.linspace(0, p995, 40),
-         "① 연 보수 USD — 극단 우측 왜도",
+         "① 연 보수 USD (ConvertedCompYearly)",
          f"{stat_line(comp, n)} · 최대 \\${comp.max() / 1e6:.1f}M (표시범위 밖)",
          "표시는 상위 0.5% 절단")
     draw(ax[1], np.log10(comp.dropna()), 40,
-         "② 같은 변수 log10 — 변환 근거",
-         "종형에 가까워지나 \\$1~\\$200대 쓰레기 응답이 좌측 꼬리로 남음 → 윈저라이징 병행",
+         "② 연 보수 USD — log10 축",
+         "",
          "log10(USD)")
     yc = df["YearsCode"]
     draw(ax[2], yc, np.arange(0, 53, 1),
-         "③ 코딩 연수 — sentinel 흔적",
-         f"{stat_line(yc, n)} · 0.5=“Less than 1 year”(569건), "
-         "51=“More than 50 years”(254건)", "년")
+         "③ 코딩 연수 (YearsCode)",
+         stat_line(yc, n), "년")
     draw(ax[3], df["YearsCodePro"], np.arange(0, 53, 1),
-         "④ 직업 코딩 연수 — 우측 왜도",
+         "④ 직업 코딩 연수 (YearsCodePro)",
          stat_line(df["YearsCodePro"], n), "년")
     draw(ax[4], df["WorkExp"], np.arange(0, 51, 1),
-         "⑤ 근무 경력 — 우측 왜도",
+         "⑤ 근무 경력 (WorkExp)",
          stat_line(df["WorkExp"], n), "년")
     draw(ax[5], df["JobSat"], np.arange(-0.5, 11.5, 1),
-         "⑥ 직무 만족(0~10) — 좌왜",
-         stat_line(df["JobSat"], n) + " · log 제외 대상", "점")
+         "⑥ 직무 만족 0~10 (JobSat)",
+         stat_line(df["JobSat"], n), "점")
     js6, js4 = df["JobSatPoints_6"], df["JobSatPoints_4"]
 
     def zero_pct(s: pd.Series) -> str:
         return f"0점 비율 {100 * (s.dropna() == 0).mean():.0f}%"
 
     draw(ax[6], js6, np.arange(0, 102, 2.5),
-         "⑦ 배점: 코드 품질 개선 — zero-inflated",
+         "⑦ 배점: 코드 품질 개선 (JobSatPoints_6)",
          f"{stat_line(js6, n)} · {zero_pct(js6)}", "배점(100점 분배)")
     draw(ax[7], js4, np.arange(0, 102, 2.5),
-         "⑧ 배점: 오픈소스 기여 — 극단 zero-inflated",
+         "⑧ 배점: 오픈소스 기여 (JobSatPoints_4)",
          f"{stat_line(js4, n)} · {zero_pct(js4)}", "배점(100점 분배)")
 
-    fig.suptitle("수치형 원자료 분포 진단 — 변환(4단계) 이전 · n=65,437",
+    fig.suptitle("수치형 원자료 분포 — 변환 이전 · n=65,437",
                  x=0.008, y=0.995, ha="left", fontsize=13, fontweight="bold", color=INK)
     fig.text(0.008, 0.955,
-             "JobSatPoints 11개 문항 중 대표 2개만 표시 "
-             "(나머지도 왜도 +1.4~+3.4, 0점 비율 27~68%로 동일 양상)",
+             "JobSatPoints 11개 문항 중 대표 2개만 표시",
              fontsize=8.5, color=MUTED)
     fig.tight_layout(rect=[0, 0, 1, 0.93])
     fig.savefig(OUT, facecolor=SURFACE, bbox_inches="tight")
