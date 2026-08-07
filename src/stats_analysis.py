@@ -19,13 +19,15 @@ from pathlib import Path
 
 try:
     from src.config import (
-        SILVER_PARQUET
+        SILVER_PARQUET,
+        AI_TRAIN_PARQUET
     )
 except ModuleNotFoundError:
     # 이 파일을 직접 실행하면(IDE 의 F5 등) src 를 패키지로 못 찾는다.
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from src.config import (
-        SILVER_PARQUET
+        SILVER_PARQUET,
+        AI_TRAIN_PARQUET
     )
 
 
@@ -78,7 +80,40 @@ if "CompTotal" in df.columns:
     )
 
 numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-categorical_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
+
+# ---------------------------------------------------------
+# 분석 대상 범주형 변수를 아래 35개로 제한
+# (target은 dtype상 수치형(int8 등)이지만 실제로는 범주형(코드화된) 변수이므로 포함)
+# ---------------------------------------------------------
+ALLOWED_CATEGORICAL_VARS = [
+    'MainBranch', 'Age', 'RemoteWork', 'EdLevel', 'DevType', 'OrgSize',
+    'PurchaseInfluence', 'BuildvsBuy', 'Country', 'SOVisitFreq', 'SOAccount',
+    'SOPartFreq', 'SOComm', 'TBranch', 'ICorPM',
+    'Knowledge_1', 'Knowledge_2', 'Knowledge_3', 'Knowledge_4', 'Knowledge_5',
+    'Knowledge_6', 'Knowledge_7', 'Knowledge_8', 'Knowledge_9',
+    'Frequency_1', 'Frequency_2', 'Frequency_3',
+    'TimeSearching', 'TimeAnswering',
+    'ProfessionalCloud', 'ProfessionalQuestion', 'Industry',
+    'SurveyLength', 'SurveyEase',
+    'target',
+]
+
+categorical_cols_all = df.select_dtypes(include=["object", "category"]).columns.tolist()
+
+# target은 dtype이 수치형이라 위 select_dtypes에 안 잡히므로 수동으로 범주형 후보에 편입
+if "target" in df.columns and "target" not in categorical_cols_all:
+    categorical_cols_all.append("target")
+    # 범주형으로 옮기는 것이므로 수치형 기술통계/상관분석/ANOVA 후보에서는 제외해
+    # 같은 변수가 양쪽에 중복 집계되지 않도록 함
+    if "target" in numeric_cols:
+        numeric_cols.remove("target")
+
+categorical_cols = [c for c in ALLOWED_CATEGORICAL_VARS if c in categorical_cols_all]
+
+missing_categorical_vars = [c for c in ALLOWED_CATEGORICAL_VARS if c not in categorical_cols_all]
+if missing_categorical_vars:
+    print(f"경고: 데이터에 없는 지정 범주형 변수 {len(missing_categorical_vars)}개 "
+          f"(분석에서 제외됨): {missing_categorical_vars}")
 
 print(f"수치형 변수 ({len(numeric_cols)}개): {numeric_cols}")
 print(f"범주형 변수 ({len(categorical_cols)}개): {categorical_cols}\n")
@@ -325,44 +360,117 @@ print(anova_df.to_string(index=False))
 anova_df.to_csv("3_aiselect_anova_results.csv", index=False, encoding="utf-8-sig")
 print("\n저장 완료: 3_aiselect_anova_results.csv")
 
-# ---------------------------------------------------------
-# [3-3] 통계분석 결과 시각화
-# ---------------------------------------------------------
-if len(chi_df) > 0:
-    top_cat = chi_df.iloc[0]["변수"]
-    sub = df[[top_cat, TARGET]].dropna()
-    ct_pct = pd.crosstab(sub[top_cat], sub[TARGET], normalize="index") * 100
-    ct_pct.plot(kind="bar", stacked=True, figsize=(9, 5), colormap="tab10")
-    plt.title(f"{top_cat} 별 AISelect 비율 (Cramér's V 최상위)")
-    plt.ylabel("비율 (%)")
-    plt.xticks(rotation=45, ha="right")
-    plt.legend(title="AISelect", bbox_to_anchor=(1.02, 1), loc="upper left")
-    plt.tight_layout()
-    plt.savefig("3_aiselect_top_categorical.png", dpi=150)
-    print("\n그래프 저장: 3_aiselect_top_categorical.png")
 
-valid_numeric_vars = [c for c in STAT_NUMERIC_VARS if c in df.columns]
-if valid_numeric_vars:
-    fig, axes = plt.subplots(1, len(valid_numeric_vars),
-                              figsize=(5 * len(valid_numeric_vars), 5))
-    if len(valid_numeric_vars) == 1:
-        axes = [axes]
-    for ax, col in zip(axes, valid_numeric_vars):
-        sns.boxplot(x=TARGET, y=col, data=df, ax=ax)
-        ax.set_title(col)
-        ax.tick_params(axis="x", rotation=30)
-    plt.tight_layout()
-    plt.savefig("3_aiselect_numeric_boxplots.png", dpi=150)
-    print("그래프 저장: 3_aiselect_numeric_boxplots.png")
 
-print("""
---- 해석 가이드 ---
-Cramér's V  : 0.1 미만=거의 무의미, 0.1~0.3=약함/중간, 0.3+=강함
-eta-squared : 0.01=작음, 0.06=중간, 0.14+=큼
-표본이 커서 p-value는 거의 항상 유의하게 나오므로
-반드시 CramersV / eta_squared로 실질적 의미를 판단하세요.
-""")
+# #########################################################
+# [4] 추가 분석 (ai_train.parquet 기준, target 변수 사용)
+#     * 위 [1]~[3]은 SILVER_PARQUET(AISelect) 기준 분석이며,
+#       이 섹션은 AI_TRAIN_PARQUET(target) 기준의 별도 분석입니다.
+#       변수명이 겹치지 않도록 df_ai / AI_TARGET 을 새로 사용합니다.
+# #########################################################
+print("\n\n" + "#" * 70)
+print("# [4] 추가 분석 - ai_train.parquet (target)")
+print("#" * 70)
+
+AI_TARGET = "target"
+COMP_COL = "ConvertedCompYearly"
+
+df_ai = pd.read_parquet(AI_TRAIN_PARQUET)
+
+# YearsCode / YearsCodePro 전처리 (문자열 -> 숫자, 위에서 정의한 clean_years 재사용)
+for col in ["YearsCode", "YearsCodePro"]:
+    if col in df_ai.columns:
+        df_ai[col] = df_ai[col].apply(clean_years)
+
+if COMP_COL in df_ai.columns:
+    df_ai[COMP_COL] = pd.to_numeric(df_ai[COMP_COL], errors="coerce")
+
+if "WorkExp" in df_ai.columns:
+    df_ai["WorkExp"] = pd.to_numeric(df_ai["WorkExp"], errors="coerce")
+
+if AI_TARGET not in df_ai.columns:
+    print(f"경고: {AI_TARGET} 컬럼이 없어 [4] 전체를 건너뜁니다.")
+
+
+# ---------------------------------------------------------
+# [4-1] YearsCode/YearsCodePro/WorkExp vs ConvertedCompYearly 산점도 (target 색상)
+# ---------------------------------------------------------
+scatter_cols_needed = ["YearsCode", "YearsCodePro", "WorkExp", COMP_COL]
+if AI_TARGET in df_ai.columns and all(c in df_ai.columns for c in scatter_cols_needed):
+    print("\n" + "=" * 70)
+    print("[4-1] YearsCode/WorkExp/YearsCodePro vs ConvertedCompYearly 산점도")
+    print("=" * 70)
+
+    plot_df = df_ai.sample(n=min(5000, len(df_ai)), random_state=42)
+
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+
+    sns.scatterplot(
+        data=plot_df, x="YearsCode", y="YearsCodePro",
+        hue=AI_TARGET, alpha=0.4, s=20, ax=axes[0], palette="Set1"
+    )
+    axes[0].set_title("YearsCode vs YearsCodePro")
+
+    sns.scatterplot(
+        data=plot_df, x="WorkExp", y=COMP_COL,
+        hue=AI_TARGET, alpha=0.4, s=20, ax=axes[1], palette="Set1"
+    )
+    axes[1].set_title(f"WorkExp vs {COMP_COL}")
+    axes[1].set_yscale("log")  # 연봉은 왜도가 커서 로그축 권장
+
+    sns.scatterplot(
+        data=plot_df, x="YearsCodePro", y=COMP_COL,
+        hue=AI_TARGET, alpha=0.4, s=20, ax=axes[2], palette="Set1"
+    )
+    axes[2].set_title(f"YearsCodePro vs {COMP_COL}")
+    axes[2].set_yscale("log")
+
+    for ax in axes:
+        ax.legend(title=AI_TARGET, loc="upper right")
+
+    plt.tight_layout()
+    plt.savefig("5_scatter_target_colored.png", dpi=150)
+    plt.show()
+    print("저장 완료: 5_scatter_target_colored.png")
+else:
+    missing = [c for c in scatter_cols_needed if c not in df_ai.columns]
+    if missing:
+        print(f"\n[4-1] 건너뜀: 필요한 컬럼 없음 {missing}")
+
+
+# ---------------------------------------------------------
+# [4-2] Age x OrgSize 조합별 target 비율 버블 차트
+# ---------------------------------------------------------
+if AI_TARGET in df_ai.columns and {"Age", "OrgSize"}.issubset(df_ai.columns):
+    print("\n" + "=" * 70)
+    print("[4-2] Age × OrgSize 조합별 target 비율 (버블차트)")
+    print("=" * 70)
+
+    sub42 = df_ai[["Age", "OrgSize", AI_TARGET]].dropna()
+
+    agg = sub42.groupby(["Age", "OrgSize"]).agg(
+        target_rate=(AI_TARGET, "mean"),
+        n=(AI_TARGET, "size")
+    ).reset_index()
+
+    plt.figure(figsize=(12, 7))
+    scatter = plt.scatter(
+        x=agg["Age"], y=agg["OrgSize"],
+        s=agg["n"] / agg["n"].max() * 800,   # 표본 크기 -> 점 크기
+        c=agg["target_rate"], cmap="coolwarm",
+        alpha=0.8, edgecolors="black", linewidths=0.5
+    )
+    plt.colorbar(scatter, label="target=1 비율")
+    plt.xticks(rotation=30, ha="right")
+    plt.title("Age × OrgSize 조합별 target 비율 (점 크기=표본수)")
+    plt.xlabel("Age")
+    plt.ylabel("OrgSize")
+    plt.tight_layout()
+    plt.savefig("6_age_orgsize_target_bubble.png", dpi=150)
+    plt.show()
+    print("저장 완료: 6_age_orgsize_target_bubble.png")
+
 
 print("\n" + "#" * 70)
-print("# 전체 분석 완료")
+print("# [4] 추가 분석 완료")
 print("#" * 70)
