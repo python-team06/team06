@@ -14,3 +14,7 @@ __pycache__/
 
 # ---- 대용량 원본 (저장소에는 압축본 data/results.csv.gz 만 둔다) ----
 /data/results.csv
+
+# ---- 보고서 전용 산출물 (로컬에서만 쓰고 커밋하지 않는다) ----
+/src/visualize_raw_dist.py
+/data/0_1_raw_numeric_distributions.png
