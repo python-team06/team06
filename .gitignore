@@ -12,6 +12,7 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 .DS_Store
+**/.DS_Store
 
 # ---- 대용량 원본 (저장소에는 압축본 data/results.csv.gz 만 둔다) ----
 /data/results.csv
